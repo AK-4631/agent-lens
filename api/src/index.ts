@@ -1,51 +1,37 @@
 import express from "express";
-import { randomUUID } from "node:crypto";
+import cors from "cors";
+import {stats,providers,events,addEvent} from "../../core/src/storage";
 
-const app = express();
-const PORT = Number(process.env.PORT) || 8787;
+const app=express();
+const port=Number(process.env.AGENT_LENS_PORT)||4321;
 
-app.use(express.json());
+app.disable("x-powered-by");
+app.use(cors());
+app.use(express.json({limit:"1mb"}));
 
-const events: any[] = [];
+app.get("/api/health",(_,res)=>res.json({
+ ok:true,
+ service:"agent-lens",
+ version:"MAX"
+}));
 
-app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    service: "agent-lens-api",
-    events: events.length
-  });
+app.get("/api/stats",(_,res)=>res.json(stats()));
+app.get("/api/providers",(_,res)=>res.json(providers()));
+
+app.get("/api/events",(req,res)=>{
+ const limit=Number(req.query.limit)||250;
+ res.json({events:events(limit)});
 });
 
-app.post("/events", (req, res) => {
-  const event = {
-    id: randomUUID(),
-    receivedAt: new Date().toISOString(),
-    ...req.body
-  };
+app.post("/api/events",(req,res)=>{
+ if(!req.body?.sessionId||!req.body?.type||!req.body?.timestamp)
+   return res.status(400).json({error:"sessionId,type,timestamp required"});
 
-  events.push(event);
-
-  res.status(201).json({
-    success: true,
-    event
-  });
+ res.status(201).json({
+   id:addEvent(req.body)
+ });
 });
 
-app.get("/events", (_req, res) => {
-  res.json({
-    count: events.length,
-    events
-  });
-});
-
-app.listen(PORT, () => {
-  console.log("");
-  console.log("==================================");
-  console.log("       AGENT LENS API");
-  console.log("==================================");
-  console.log("");
-  console.log("API:    http://localhost:" + PORT);
-  console.log("Health: http://localhost:" + PORT + "/health");
-  console.log("Events: http://localhost:" + PORT + "/events");
-  console.log("");
+app.listen(port,"127.0.0.1",()=>{
+ console.log(`Agent Lens MAX API: http://127.0.0.1:${port}`);
 });

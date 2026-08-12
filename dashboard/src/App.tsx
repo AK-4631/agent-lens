@@ -1,553 +1,607 @@
-import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  Bot,
+  AlertCircle,
   CheckCircle2,
-  ChevronRight,
   Clock3,
-  Code2,
   DollarSign,
-  GitBranch,
-  Menu,
-  MessageSquare,
-  MoreHorizontal,
-  Play,
   RefreshCw,
-  Search,
-  Settings,
-  Terminal,
-  XCircle,
-  Zap
+  Server,
+  Zap,
 } from "lucide-react";
+import "./index.css";
 
-type Run = {
+type Event = {
   id: string;
-  agent: string;
-  model: string;
-  task: string;
-  status: "success" | "running" | "failed";
-  duration: string;
-  tokens: string;
-  cost: string;
-  branch: string;
-  time: string;
+  timestamp: string;
+  provider?: string;
+  model?: string;
+  agent?: string;
+  status?: "success" | "error" | "running";
+  latencyMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  cost?: number;
+  message?: string;
 };
 
-const runs: Run[] = [
-  {
-    id: "run_8f31",
-    agent: "Claude Code",
-    model: "Claude Sonnet",
-    task: "Implement authentication middleware",
-    status: "success",
-    duration: "2m 14s",
-    tokens: "18.4k",
-    cost: "$0.42",
-    branch: "feat/auth",
-    time: "2 min ago"
-  },
-  {
-    id: "run_8f29",
-    agent: "Codex",
-    model: "GPT-5",
-    task: "Refactor API error handling",
-    status: "running",
-    duration: "1m 08s",
-    tokens: "9.8k",
-    cost: "$0.19",
-    branch: "refactor/api",
-    time: "4 min ago"
-  },
-  {
-    id: "run_8f27",
-    agent: "Gemini CLI",
-    model: "Gemini 2.5 Pro",
-    task: "Add dashboard analytics",
-    status: "success",
-    duration: "4m 31s",
-    tokens: "31.2k",
-    cost: "$0.31",
-    branch: "feat/analytics",
-    time: "18 min ago"
-  },
-  {
-    id: "run_8f21",
-    agent: "Claude Code",
-    model: "Claude Sonnet",
-    task: "Fix websocket reconnect loop",
-    status: "failed",
-    duration: "48s",
-    tokens: "7.1k",
-    cost: "$0.16",
-    branch: "fix/ws",
-    time: "31 min ago"
-  },
-  {
-    id: "run_8f18",
-    agent: "Codex",
-    model: "GPT-5",
-    task: "Generate unit tests for billing",
-    status: "success",
-    duration: "3m 02s",
-    tokens: "22.7k",
-    cost: "$0.36",
-    branch: "test/billing",
-    time: "42 min ago"
-  }
-];
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8787";
 
-function StatusIcon({ status }: { status: Run["status"] }) {
-  if (status === "success") {
-    return <CheckCircle2 size={17} className="status-success" />;
+const PROVIDERS: Record<string, { name: string; slug: string; color: string }> = {
+  openai: {
+    name: "OpenAI",
+    slug: "openai",
+    color: "#10a37f",
+  },
+  anthropic: {
+    name: "Anthropic",
+    slug: "anthropic",
+    color: "#d97757",
+  },
+  claude: {
+    name: "Claude",
+    slug: "anthropic",
+    color: "#d97757",
+  },
+  google: {
+    name: "Google",
+    slug: "google",
+    color: "#4285f4",
+  },
+  gemini: {
+    name: "Gemini",
+    slug: "googlegemini",
+    color: "#8ab4f8",
+  },
+  github: {
+    name: "GitHub",
+    slug: "github",
+    color: "#f0f6fc",
+  },
+  copilot: {
+    name: "Copilot",
+    slug: "githubcopilot",
+    color: "#8b5cf6",
+  },
+  cursor: {
+    name: "Cursor",
+    slug: "cursor",
+    color: "#ffffff",
+  },
+  xai: {
+    name: "xAI",
+    slug: "x",
+    color: "#ffffff",
+  },
+  grok: {
+    name: "Grok",
+    slug: "x",
+    color: "#ffffff",
+  },
+  deepseek: {
+    name: "DeepSeek",
+    slug: "deepseek",
+    color: "#4f8cff",
+  },
+  mistral: {
+    name: "Mistral",
+    slug: "mistralai",
+    color: "#ff7000",
+  },
+  meta: {
+    name: "Meta",
+    slug: "meta",
+    color: "#0668e1",
+  },
+  llama: {
+    name: "Llama",
+    slug: "meta",
+    color: "#0668e1",
+  },
+  cohere: {
+    name: "Cohere",
+    slug: "cohere",
+    color: "#39594d",
+  },
+  perplexity: {
+    name: "Perplexity",
+    slug: "perplexity",
+    color: "#20b8cd",
+  },
+  ollama: {
+    name: "Ollama",
+    slug: "ollama",
+    color: "#ffffff",
+  },
+  openrouter: {
+    name: "OpenRouter",
+    slug: "openrouter",
+    color: "#ffffff",
+  },
+  vercel: {
+    name: "Vercel AI",
+    slug: "vercel",
+    color: "#ffffff",
+  },
+};
+
+function normalizeProvider(provider?: string) {
+  const key = (provider || "unknown").toLowerCase().trim();
+
+  if (PROVIDERS[key]) {
+    return PROVIDERS[key];
   }
 
-  if (status === "failed") {
-    return <XCircle size={17} className="status-failed" />;
-  }
+  if (key.includes("openai")) return PROVIDERS.openai;
+  if (key.includes("anthropic")) return PROVIDERS.anthropic;
+  if (key.includes("claude")) return PROVIDERS.claude;
+  if (key.includes("gemini")) return PROVIDERS.gemini;
+  if (key.includes("google")) return PROVIDERS.google;
+  if (key.includes("copilot")) return PROVIDERS.copilot;
+  if (key.includes("cursor")) return PROVIDERS.cursor;
+  if (key.includes("deepseek")) return PROVIDERS.deepseek;
+  if (key.includes("mistral")) return PROVIDERS.mistral;
+  if (key.includes("llama")) return PROVIDERS.llama;
+  if (key.includes("meta")) return PROVIDERS.meta;
+  if (key.includes("cohere")) return PROVIDERS.cohere;
+  if (key.includes("perplexity")) return PROVIDERS.perplexity;
+  if (key.includes("ollama")) return PROVIDERS.ollama;
+  if (key.includes("openrouter")) return PROVIDERS.openrouter;
 
-  return <RefreshCw size={17} className="status-running spin" />;
+  return {
+    name: provider || "Unknown",
+    slug: "artificial-intelligence",
+    color: "#94a3b8",
+  };
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  detail,
-  accent
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  detail: string;
-  accent: string;
-}) {
+function ProviderIcon({ provider }: { provider?: string }) {
+  const info = normalizeProvider(provider);
+
   return (
-    <div className="stat-card">
-      <div className="stat-top">
-        <div className={`stat-icon ${accent}`}>{icon}</div>
-        <span className="stat-label">{label}</span>
-      </div>
-      <div className="stat-value">{value}</div>
-      <div className="stat-detail">{detail}</div>
+    <div
+      className="provider-icon"
+      style={{
+        borderColor: `${info.color}55`,
+        background: `${info.color}12`,
+      }}
+      title={info.name}
+    >
+      <img
+        src={`https://cdn.simpleicons.org/${info.slug}/${info.color.replace(
+          "#",
+          ""
+        )}`}
+        alt={info.name}
+        onError={(event) => {
+          event.currentTarget.style.display = "none";
+          const fallback = event.currentTarget
+            .nextElementSibling as HTMLElement | null;
+
+          if (fallback) fallback.style.display = "block";
+        }}
+      />
+      <span className="provider-fallback">
+        {info.name.charAt(0)}
+      </span>
     </div>
   );
 }
 
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-US").format(Math.round(value || 0));
+}
+
+function formatMoney(value: number) {
+  return `$${Number(value || 0).toFixed(4)}`;
+}
+
+function formatTime(timestamp: string) {
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return timestamp;
+  }
+
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+async function fetchEvents(): Promise<Event[]> {
+  const response = await fetch(`${API_URL}/events`, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`API returned ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.events)) return data.events;
+  if (Array.isArray(data.data)) return data.data;
+
+  return [];
+}
+
 function App() {
-  const [selectedRun, setSelectedRun] = useState<Run | null>(runs[0]);
-  const [query, setQuery] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState("all");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const filteredRuns = useMemo(() => {
-    const q = query.toLowerCase();
+  async function loadEvents() {
+    try {
+      setError("");
 
-    if (!q) return runs;
+      const data = await fetchEvents();
 
-    return runs.filter(
-      (run) =>
-        run.task.toLowerCase().includes(q) ||
-        run.agent.toLowerCase().includes(q) ||
-        run.branch.toLowerCase().includes(q)
+      setEvents(data);
+      setConnected(true);
+      setLastUpdated(new Date());
+    } catch (err) {
+      setConnected(false);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect to Agent Lens API"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadEvents();
+
+    const timer = window.setInterval(loadEvents, 3000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const providers = useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const event of events) {
+      const provider = event.provider || "Unknown";
+      map.set(provider, (map.get(provider) || 0) + 1);
+    }
+
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [events]);
+
+  const filteredEvents = useMemo(() => {
+    if (selectedProvider === "all") {
+      return events;
+    }
+
+    return events.filter(
+      (event) =>
+        (event.provider || "Unknown").toLowerCase() ===
+        selectedProvider.toLowerCase()
     );
-  }, [query]);
+  }, [events, selectedProvider]);
+
+  const stats = useMemo(() => {
+    let tokens = 0;
+    let cost = 0;
+    let latency = 0;
+    let latencyCount = 0;
+    let success = 0;
+    let errors = 0;
+
+    for (const event of events) {
+      tokens +=
+        event.totalTokens ??
+        (event.inputTokens || 0) + (event.outputTokens || 0);
+
+      cost += event.cost || 0;
+
+      if (event.latencyMs != null) {
+        latency += event.latencyMs;
+        latencyCount++;
+      }
+
+      if (event.status === "error") {
+        errors++;
+      } else {
+        success++;
+      }
+    }
+
+    return {
+      events: events.length,
+      tokens,
+      cost,
+      avgLatency: latencyCount
+        ? Math.round(latency / latencyCount)
+        : 0,
+      success,
+      errors,
+    };
+  }, [events]);
 
   return (
-    <div className="app-shell">
-      <aside className={`sidebar ${sidebarOpen ? "" : "collapsed"}`}>
+    <div className="app">
+      <header className="topbar">
         <div className="brand">
           <div className="brand-mark">
-            <Zap size={19} />
+            <Activity size={20} />
           </div>
-          {sidebarOpen && (
-            <div>
-              <div className="brand-name">Agent Lens</div>
-              <div className="brand-version">v0.1.0</div>
-            </div>
-          )}
+
+          <div>
+            <h1>Agent Lens</h1>
+            <span>AI agent observability</span>
+          </div>
         </div>
 
-        <nav>
-          <div className="nav-section">
-            {sidebarOpen && <div className="nav-title">WORKSPACE</div>}
+        <div className="connection">
+          <span
+            className={`status-dot ${
+              connected ? "online" : "offline"
+            }`}
+          />
 
-            <button className="nav-item active">
-              <Activity size={18} />
-              {sidebarOpen && <span>Overview</span>}
-            </button>
+          {connected ? "API connected" : "API disconnected"}
 
-            <button className="nav-item">
-              <Bot size={18} />
-              {sidebarOpen && <span>Agents</span>}
-            </button>
-
-            <button className="nav-item">
-              <Terminal size={18} />
-              {sidebarOpen && <span>Runs</span>}
-            </button>
-
-            <button className="nav-item">
-              <GitBranch size={18} />
-              {sidebarOpen && <span>Projects</span>}
-            </button>
-          </div>
-
-          <div className="nav-section">
-            {sidebarOpen && <div className="nav-title">INSIGHTS</div>}
-
-            <button className="nav-item">
-              <DollarSign size={18} />
-              {sidebarOpen && <span>Costs</span>}
-            </button>
-
-            <button className="nav-item">
-              <Code2 size={18} />
-              {sidebarOpen && <span>Tool Calls</span>}
-            </button>
-          </div>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <button className="nav-item">
-            <Settings size={18} />
-            {sidebarOpen && <span>Settings</span>}
+          <button onClick={loadEvents} title="Refresh">
+            <RefreshCw size={16} />
           </button>
+        </div>
+      </header>
 
-          <div className="connection">
-            <span className="online-dot" />
-            {sidebarOpen && (
-              <span>
-                API connected
-              </span>
+      <main className="container">
+        <section className="hero">
+          <div>
+            <p className="eyebrow">LIVE TELEMETRY</p>
+            <h2>AI Agent Activity</h2>
+            <p>
+              Monitor your coding agents, models, latency, tokens and
+              costs in real time.
+            </p>
+          </div>
+
+          <div className="live">
+            <span className="pulse" />
+            LIVE
+          </div>
+        </section>
+
+        {error && (
+          <div className="error-banner">
+            <AlertCircle size={18} />
+            <div>
+              <strong>API connection failed</strong>
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
+
+        <section className="stats">
+          <Stat
+            icon={<Activity />}
+            label="Events"
+            value={formatNumber(stats.events)}
+          />
+
+          <Stat
+            icon={<Zap />}
+            label="Tokens"
+            value={formatNumber(stats.tokens)}
+          />
+
+          <Stat
+            icon={<DollarSign />}
+            label="Estimated cost"
+            value={formatMoney(stats.cost)}
+          />
+
+          <Stat
+            icon={<Clock3 />}
+            label="Avg latency"
+            value={`${stats.avgLatency}ms`}
+          />
+
+          <Stat
+            icon={<CheckCircle2 />}
+            label="Successful"
+            value={formatNumber(stats.success)}
+          />
+
+          <Stat
+            icon={<AlertCircle />}
+            label="Errors"
+            value={formatNumber(stats.errors)}
+          />
+        </section>
+
+        <section className="content-grid">
+          <div className="panel events-panel">
+            <div className="panel-header">
+              <div>
+                <h3>Recent events</h3>
+                <p>
+                  {lastUpdated
+                    ? `Updated ${lastUpdated.toLocaleTimeString()}`
+                    : "Waiting for data"}
+                </p>
+              </div>
+
+              {loading && <RefreshCw className="spin" size={18} />}
+            </div>
+
+            <div className="filters">
+              <button
+                className={
+                  selectedProvider === "all" ? "active" : ""
+                }
+                onClick={() => setSelectedProvider("all")}
+              >
+                All
+              </button>
+
+              {providers.map(([provider, count]) => (
+                <button
+                  key={provider}
+                  className={
+                    selectedProvider === provider ? "active" : ""
+                  }
+                  onClick={() => setSelectedProvider(provider)}
+                >
+                  <ProviderIcon provider={provider} />
+                  {provider}
+                  <span>{count}</span>
+                </button>
+              ))}
+            </div>
+
+            {filteredEvents.length === 0 ? (
+              <div className="empty">
+                <Server size={32} />
+                <h3>No events yet</h3>
+                <p>
+                  Start an AI agent or send an event to the Agent Lens
+                  API.
+                </p>
+              </div>
+            ) : (
+              <div className="event-list">
+                {filteredEvents.map((event, index) => {
+                  const provider = normalizeProvider(event.provider);
+
+                  return (
+                    <div
+                      className="event-row"
+                      key={event.id || `${event.timestamp}-${index}`}
+                    >
+                      <ProviderIcon provider={event.provider} />
+
+                      <div className="event-main">
+                        <div className="event-title">
+                          <strong>
+                            {event.model || provider.name}
+                          </strong>
+
+                          {event.agent && (
+                            <span className="agent">
+                              {event.agent}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="event-meta">
+                          <span>{provider.name}</span>
+                          <span>•</span>
+                          <span>
+                            {event.totalTokens ??
+                              (event.inputTokens || 0) +
+                                (event.outputTokens || 0)}{" "}
+                            tokens
+                          </span>
+
+                          {event.latencyMs != null && (
+                            <>
+                              <span>•</span>
+                              <span>{event.latencyMs}ms</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="event-right">
+                        <Status status={event.status} />
+                        <time>
+                          {formatTime(event.timestamp)}
+                        </time>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
-        </div>
-      </aside>
 
-      <main className="main">
-        <header className="topbar">
-          <div className="topbar-left">
-            <button
-              className="icon-button"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              <Menu size={19} />
-            </button>
-
-            <div className="breadcrumb">
-              <span>Workspace</span>
-              <ChevronRight size={14} />
-              <strong>Overview</strong>
-            </div>
-          </div>
-
-          <div className="topbar-actions">
-            <div className="search">
-              <Search size={16} />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search runs..."
-              />
-              <kbd>⌘ K</kbd>
-            </div>
-
-            <button className="icon-button">
-              <MessageSquare size={18} />
-            </button>
-
-            <div className="avatar">AK</div>
-          </div>
-        </header>
-
-        <div className="content">
-          <section className="hero">
-            <div>
-              <div className="eyebrow">
-                <span className="pulse" />
-                LIVE OBSERVABILITY
+          <aside className="panel providers-panel">
+            <div className="panel-header">
+              <div>
+                <h3>AI providers</h3>
+                <p>Detected from live events</p>
               </div>
-
-              <h1>Agent activity at a glance.</h1>
-
-              <p>
-                Monitor every AI coding session, tool call, token and outcome
-                from one place.
-              </p>
             </div>
 
-            <button className="primary-button">
-              <Play size={16} />
-              Start recording
-            </button>
-          </section>
-
-          <section className="stats-grid">
-            <StatCard
-              icon={<Activity size={19} />}
-              label="Agent runs"
-              value="248"
-              detail="+18.4% vs last week"
-              accent="purple"
-            />
-
-            <StatCard
-              icon={<CheckCircle2 size={19} />}
-              label="Success rate"
-              value="94.8%"
-              detail="+2.1% vs last week"
-              accent="green"
-            />
-
-            <StatCard
-              icon={<Zap size={19} />}
-              label="Tokens used"
-              value="2.84M"
-              detail="↓ 8.2% efficiency gain"
-              accent="blue"
-            />
-
-            <StatCard
-              icon={<DollarSign size={19} />}
-              label="Estimated cost"
-              value="$48.21"
-              detail="$6.80 saved this week"
-              accent="orange"
-            />
-          </section>
-
-          <section className="dashboard-grid">
-            <div className="panel runs-panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Recent runs</h2>
-                  <p>Latest activity from your coding agents</p>
+            <div className="provider-list">
+              {providers.length === 0 ? (
+                <div className="provider-empty">
+                  No providers detected yet.
                 </div>
+              ) : (
+                providers.map(([provider, count]) => {
+                  const info = normalizeProvider(provider);
 
-                <button className="ghost-button">
-                  View all
-                  <ChevronRight size={15} />
-                </button>
-              </div>
+                  return (
+                    <button
+                      className="provider-card"
+                      key={provider}
+                      onClick={() => setSelectedProvider(provider)}
+                    >
+                      <ProviderIcon provider={provider} />
 
-              <div className="run-list">
-                {filteredRuns.map((run) => (
-                  <button
-                    key={run.id}
-                    className={`run-row ${
-                      selectedRun?.id === run.id ? "selected" : ""
-                    }`}
-                    onClick={() => setSelectedRun(run)}
-                  >
-                    <div className="run-status">
-                      <StatusIcon status={run.status} />
-                    </div>
-
-                    <div className="run-main">
-                      <div className="run-title">{run.task}</div>
-                      <div className="run-meta">
-                        <span>{run.agent}</span>
-                        <span>•</span>
-                        <span>{run.branch}</span>
-                        <span>•</span>
-                        <span>{run.time}</span>
-                      </div>
-                    </div>
-
-                    <div className="run-metrics">
-                      <span>{run.tokens}</span>
-                      <span>{run.cost}</span>
-                    </div>
-
-                    <ChevronRight size={16} className="row-arrow" />
-                  </button>
-                ))}
-
-                {filteredRuns.length === 0 && (
-                  <div className="empty">
-                    No runs match your search.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="panel detail-panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Run details</h2>
-                  <p>{selectedRun?.id ?? "Select a run"}</p>
-                </div>
-
-                <button className="icon-button">
-                  <MoreHorizontal size={18} />
-                </button>
-              </div>
-
-              {selectedRun && (
-                <div className="detail-content">
-                  <div className="detail-status">
-                    <StatusIcon status={selectedRun.status} />
-                    <span>
-                      {selectedRun.status === "running"
-                        ? "Currently running"
-                        : selectedRun.status === "success"
-                        ? "Completed successfully"
-                        : "Run failed"}
-                    </span>
-                  </div>
-
-                  <h3>{selectedRun.task}</h3>
-
-                  <div className="agent-badge">
-                    <div className="mini-agent">
-                      {selectedRun.agent === "Codex" ? "C" : "✦"}
-                    </div>
-                    <div>
-                      <strong>{selectedRun.agent}</strong>
-                      <span>{selectedRun.model}</span>
-                    </div>
-                  </div>
-
-                  <div className="detail-stats">
-                    <div>
-                      <span>Duration</span>
-                      <strong>
-                        <Clock3 size={14} />
-                        {selectedRun.duration}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span>Tokens</span>
-                      <strong>{selectedRun.tokens}</strong>
-                    </div>
-
-                    <div>
-                      <span>Cost</span>
-                      <strong>{selectedRun.cost}</strong>
-                    </div>
-                  </div>
-
-                  <div className="timeline">
-                    <div className="timeline-item">
-                      <div className="timeline-dot purple" />
                       <div>
-                        <strong>Prompt received</strong>
-                        <span>Agent started working</span>
+                        <strong>{info.name}</strong>
+                        <span>{count} events</span>
                       </div>
-                      <small>00:00</small>
-                    </div>
 
-                    <div className="timeline-item">
-                      <div className="timeline-dot blue" />
-                      <div>
-                        <strong>Tool call</strong>
-                        <span>Read src/auth/middleware.ts</span>
-                      </div>
-                      <small>00:08</small>
-                    </div>
-
-                    <div className="timeline-item">
-                      <div className="timeline-dot orange" />
-                      <div>
-                        <strong>Files changed</strong>
-                        <span>4 files modified</span>
-                      </div>
-                      <small>01:42</small>
-                    </div>
-
-                    <div className="timeline-item">
-                      <div className="timeline-dot green" />
-                      <div>
-                        <strong>Tests passed</strong>
-                        <span>18 tests completed</span>
-                      </div>
-                      <small>02:14</small>
-                    </div>
-                  </div>
-                </div>
+                      <span className="arrow">→</span>
+                    </button>
+                  );
+                })
               )}
             </div>
-          </section>
-
-          <section className="bottom-grid">
-            <div className="panel chart-panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Agent activity</h2>
-                  <p>Runs over the last 7 days</p>
-                </div>
-
-                <select defaultValue="7d">
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                </select>
-              </div>
-
-              <div className="chart">
-                <div className="chart-y">
-                  <span>60</span>
-                  <span>40</span>
-                  <span>20</span>
-                  <span>0</span>
-                </div>
-
-                <div className="bars">
-                  {[42, 55, 37, 64, 48, 72, 58].map((height, i) => (
-                    <div className="bar-column" key={i}>
-                      <div
-                        className="bar"
-                        style={{ height: `${height}%` }}
-                      />
-                      <span>
-                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="panel agents-panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Top agents</h2>
-                  <p>Usage by provider</p>
-                </div>
-              </div>
-
-              <div className="agent-list">
-                <div className="agent-row">
-                  <div className="agent-logo claude">✦</div>
-                  <div className="agent-info">
-                    <strong>Claude Code</strong>
-                    <span>Anthropic</span>
-                  </div>
-                  <strong>46%</strong>
-                </div>
-
-                <div className="agent-row">
-                  <div className="agent-logo codex">C</div>
-                  <div className="agent-info">
-                    <strong>Codex</strong>
-                    <span>OpenAI</span>
-                  </div>
-                  <strong>34%</strong>
-                </div>
-
-                <div className="agent-row">
-                  <div className="agent-logo gemini">✦</div>
-                  <div className="agent-info">
-                    <strong>Gemini CLI</strong>
-                    <span>Google</span>
-                  </div>
-                  <strong>20%</strong>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+          </aside>
+        </section>
       </main>
     </div>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="stat">
+      <div className="stat-icon">{icon}</div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function Status({ status }: { status?: Event["status"] }) {
+  const actual = status || "success";
+
+  return (
+    <span className={`status ${actual}`}>
+      {actual === "success" && <CheckCircle2 size={14} />}
+      {actual === "error" && <AlertCircle size={14} />}
+      {actual === "running" && <RefreshCw size={14} />}
+      {actual}
+    </span>
   );
 }
 

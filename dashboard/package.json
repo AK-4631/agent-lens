@@ -10,7 +10,8 @@
   "dependencies": {
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "simple-icons": "^16.28.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.2",

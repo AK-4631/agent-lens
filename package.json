@@ -1,25 +1,29 @@
-{
-  "name": "agent-lens",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Open-source observability for AI coding agents",
-  "workspaces": [
-    "core",
-    "cli",
-    "dashboard"
-  ],
-  "scripts": {
-    "build": "npm run build -w core && npm run build -w dashboard",
-    "dev": "npm run dev -w dashboard",
-    "cli": "npm run dev -w cli",
-    "test": "npm test -w core"
-  },
-  "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^26.2.0",
-    "autoprefixer": "^10.5.4",
-    "postcss": "^8.5.26",
-    "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
-  }
+﻿{
+    "name":  "agent-lens",
+    "version":  "1.0.0",
+    "private":  true,
+    "workspaces":  [
+                       "core",
+                       "cli"
+                   ],
+    "scripts":  {
+                    "install:all":  "npm install",
+                    "build":  "npm run build:core \u0026\u0026 npm run build:cli",
+                    "build:core":  "npm --prefix ./core run build",
+                    "build:cli":  "npm --prefix ./cli run build",
+                    "typecheck":  "npm run typecheck:core \u0026\u0026 npm run typecheck:cli",
+                    "typecheck:core":  "npm --prefix ./core run typecheck",
+                    "typecheck:cli":  "npm --prefix ./cli run typecheck",
+                    "start":  "node ./cli/dist/index.js",
+                    "clean":  "npm run clean:core \u0026\u0026 npm run clean:cli",
+                    "clean:core":  "node -e \"require(\u0027fs\u0027).rmSync(\u0027./core/dist\u0027,{recursive:true,force:true})\"",
+                    "clean:cli":  "node -e \"require(\u0027fs\u0027).rmSync(\u0027./cli/dist\u0027,{recursive:true,force:true})\"",
+                    "package:max":  "npm run build \u0026\u0026 npm test \u0026\u0026 npm pack",
+                    "test":  "npm run build \u0026\u0026 node ./cli/dist/self-test.js",
+                    "dev":  "npm run build \u0026\u0026 npm start",
+                    "package":  "npm run build \u0026\u0026 npm pack"
+                },
+    "allowScripts":  {
+                         "better-sqlite3@12.11.1":  true
+                     }
 }

@@ -1,24 +1,26 @@
 ﻿export type EventType =
   | "session_start"
   | "session_end"
+  | "telemetry"
   | "command"
   | "stdout"
   | "stderr"
-  | "file_change"
-  | "error";
+  | "error"
+  | "model_call";
 
-export interface AgentEvent {
+export type AgentEvent = {
   id?: number;
   sessionId: string;
   type: EventType;
   timestamp: string;
-  data: Record<string, unknown>;
-}
-
-export interface Session {
-  id: string;
-  command: string;
-  startedAt: string;
-  endedAt?: string;
-  status: "running" | "success" | "failed";
-}
+  status?: string;
+  provider?: string;
+  model?: string;
+  agent?: string;
+  latencyMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  cost?: number;
+  data?: unknown;
+};

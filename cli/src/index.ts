@@ -1,46 +1,51 @@
-import http from "node:http";
+﻿import { runAgent } from "./collector.js";
+import { startServer } from "./server.js";
 
-const port = 4321;
+async function main() {
 
-const server = http.createServer((req, res) => {
-  res.setHeader("Content-Type", "application/json");
+  const args = process.argv.slice(2);
 
-  if (req.url === "/health") {
-    res.writeHead(200);
-    res.end(JSON.stringify({
-      status: "ok",
-      name: "agent-lens",
-      version: "0.1.0"
-    }));
+  const command = args[0];
+
+  if (command === "run") {
+
+    const target = args[1];
+
+    const targetArgs = args.slice(2);
+
+    if (!target) {
+      console.error(
+        "Usage: agent-lens run <command> [args...]"
+      );
+
+      process.exitCode = 1;
+      return;
+    }
+
+    const code =
+      await runAgent(
+        target,
+        targetArgs
+      );
+
+    process.exitCode = code;
     return;
   }
 
-  if (req.url === "/") {
-    res.writeHead(200);
-    res.end(JSON.stringify({
-      name: "Agent Lens",
-      status: "running",
-      version: "0.1.0"
-    }));
-    return;
-  }
+  const port =
+    Number(
+      process.env.AGENT_LENS_PORT || 4321
+    );
 
-  res.writeHead(404);
-  res.end(JSON.stringify({
-    error: "Not found"
-  }));
-});
+  startServer(port);
+}
 
-server.listen(port, "127.0.0.1", () => {
-  console.log("");
-  console.log("==========================================");
-  console.log("          AGENT LENS DASHBOARD            ");
-  console.log("==========================================");
-  console.log("");
-  console.log("Dashboard API: http://localhost:4321");
-  console.log("Health check:  http://localhost:4321/health");
-  console.log("");
-  console.log("Agent Lens is running.");
-  console.log("Press Ctrl+C to stop.");
-  console.log("");
+main().catch(error => {
+
+  console.error(
+    "Fatal Agent Lens error:",
+    error
+  );
+
+  process.exitCode = 1;
 });

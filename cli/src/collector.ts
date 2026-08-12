@@ -1,10 +1,20 @@
-﻿import { randomUUID } from "crypto";
-import { spawn } from "child_process";
+﻿import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
+
 import {
   createSession,
   finishSession,
   addEvent
 } from "@agent-lens/core";
+
+import {
+  createTelemetry,
+  detectProvider,
+  detectModel,
+  extractTokenUsage,
+  estimateCost
+} from "./telemetry.js";
 
 export async function runAgent(
   command: string,
@@ -13,86 +23,186 @@ export async function runAgent(
   const sessionId = randomUUID();
   const startedAt = new Date().toISOString();
 
-  const fullCommand = [command, ...args].join(" ");
+  const fullCommand = [command, ...args]
+    .map(value => /\s/.test(value) ? JSON.stringify(value) : value)
+    .join(" ");
 
-  console.log("");
-  console.log("╭─────────────────────────────────────────────╮");
-  console.log("│ Agent Lens                                  │");
-  console.log("╰─────────────────────────────────────────────╯");
-  console.log("");
-  console.log(`Session: ${sessionId}`);
-  console.log(`Command: ${fullCommand}`);
-  console.log("");
+  let combinedOutput = "";
+
+  const initialProvider = detectProvider(fullCommand);
+  const initialModel = detectModel(fullCommand);
 
   createSession({
     id: sessionId,
     command: fullCommand,
     startedAt,
-    status: "running"
+    status: "running",
+    provider: initialProvider,
+    model: initialModel
   });
 
   addEvent({
     sessionId,
     type: "session_start",
     timestamp: startedAt,
-    data: {
-      command: fullCommand
-    }
+    status: "running",
+    provider: initialProvider,
+    model: initialModel,
+    data: { command: fullCommand }
   });
 
   addEvent({
     sessionId,
     type: "command",
     timestamp: new Date().toISOString(),
-    data: {
-      command: fullCommand
+    provider: initialProvider,
+    model: initialModel,
+    data: { command: fullCommand }
+  });
+
+  console.log("");
+  console.log("╭─────────────────────────────────────────────╮");
+  console.log("│ Agent Lens MAX                              │");
+  console.log("╰─────────────────────────────────────────────╯");
+  console.log("");
+  console.log(`Session:  ${sessionId}`);
+  console.log(`Command:  ${fullCommand}`);
+  console.log(`Provider: ${initialProvider}`);
+  console.log(`Model:    ${initialModel}`);
+  console.log("");
+
+  let child: ChildProcess;
+
+  try {
+    child = spawn(command, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: false,
+      windowsHide: true
+    });
+  } catch (error) {
+    const endedAt = new Date().toISOString();
+
+    addEvent({
+      sessionId,
+      type: "error",
+      timestamp: endedAt,
+      status: "error",
+      data: {
+        message: error instanceof Error
+          ? error.message
+          : String(error)
+      }
+    });
+
+    finishSession(sessionId, "failed", endedAt);
+    return 1;
+  }
+
+  const output = (
+    type: "stdout" | "stderr",
+    chunk: Buffer
+  ) => {
+    const text = chunk.toString();
+
+    combinedOutput += text;
+
+    if (type === "stdout") {
+      process.stdout.write(text);
+    } else {
+      process.stderr.write(text);
     }
-  });
 
-  const child = spawn(command, args, {
-    shell: true,
-    stdio: ["inherit", "pipe", "pipe"]
-  });
-
-  child.stdout.on("data", chunk => {
-    const text = chunk.toString();
-
-    process.stdout.write(text);
+    const usage = extractTokenUsage(combinedOutput);
+    const provider = detectProvider(
+      `${fullCommand}\n${combinedOutput}`
+    );
+    const model = detectModel(
+      fullCommand,
+      combinedOutput
+    );
 
     addEvent({
       sessionId,
-      type: "stdout",
+      type,
       timestamp: new Date().toISOString(),
-      data: {
-        text
-      }
+      status: type === "stderr" ? "error" : undefined,
+      provider,
+      model,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      totalTokens: usage.totalTokens,
+      cost: estimateCost(
+        model,
+        usage.inputTokens,
+        usage.outputTokens
+      ),
+      data: { text }
     });
-  });
+  };
 
-  child.stderr.on("data", chunk => {
-    const text = chunk.toString();
+  child.stdout?.on("data", chunk =>
+    output("stdout", chunk)
+  );
 
-    process.stderr.write(text);
+  child.stderr?.on("data", chunk =>
+    output("stderr", chunk)
+  );
 
-    addEvent({
-      sessionId,
-      type: "stderr",
-      timestamp: new Date().toISOString(),
-      data: {
-        text
+  return await new Promise<number>(resolve => {
+    let settled = false;
+
+    const complete = (code: number) => {
+      if (settled) {
+        return;
       }
-    });
-  });
 
-  return new Promise(resolve => {
-    child.on("close", code => {
-      const success = code === 0;
+      settled = true;
+
       const endedAt = new Date().toISOString();
+      const telemetry = createTelemetry(
+        fullCommand,
+        combinedOutput
+      );
+
+      addEvent({
+        sessionId,
+        type: "model_call",
+        timestamp: endedAt,
+        status: code === 0 ? "success" : "error",
+        provider: telemetry.provider,
+        model: telemetry.model,
+        inputTokens: telemetry.inputTokens,
+        outputTokens: telemetry.outputTokens,
+        totalTokens: telemetry.totalTokens,
+        cost: telemetry.cost,
+        data: telemetry
+      });
+
+      addEvent({
+        sessionId,
+        type: "telemetry",
+        timestamp: endedAt,
+        status: code === 0 ? "success" : "error",
+        provider: telemetry.provider,
+        model: telemetry.model,
+        inputTokens: telemetry.inputTokens,
+        outputTokens: telemetry.outputTokens,
+        totalTokens: telemetry.totalTokens,
+        cost: telemetry.cost,
+        data: telemetry
+      });
 
       addEvent({
         sessionId,
         type: "session_end",
         timestamp: endedAt,
+        status: code === 0 ? "success" : "error",
+        provider: telemetry.provider,
+        model: telemetry.model,
+        inputTokens: telemetry.inputTokens,
+        outputTokens: telemetry.outputTokens,
+        totalTokens: telemetry.totalTokens,
+        cost: telemetry.cost,
         data: {
           exitCode: code
         }
@@ -100,22 +210,39 @@ export async function runAgent(
 
       finishSession(
         sessionId,
-        success ? "success" : "failed",
+        code === 0 ? "success" : "failed",
         endedAt
       );
 
       console.log("");
       console.log(
-        success
+        code === 0
           ? "✓ Agent session completed successfully."
           : `✗ Agent session failed with exit code ${code}.`
       );
-
-      console.log("");
+      console.log(`Provider: ${telemetry.provider}`);
+      console.log(`Model: ${telemetry.model}`);
+      console.log(`Tokens: ${telemetry.totalTokens}`);
+      console.log(`Estimated cost: $${telemetry.cost.toFixed(6)}`);
       console.log(`Session ID: ${sessionId}`);
       console.log("");
 
-      resolve(code ?? 1);
-    });
+      resolve(code);
+    };
+
+    child.once("error", () => complete(1));
+
+    child.once("close", code =>
+      complete(code ?? 1)
+    );
+
+    const shutdown = () => {
+      if (!child.killed) {
+        child.kill();
+      }
+    };
+
+    process.once("SIGINT", shutdown);
+    process.once("SIGTERM", shutdown);
   });
 }

@@ -1,0 +1,13 @@
+import Database from "better-sqlite3";
+import type { AgentEvent } from "./event";
+import type { AgentSession, SessionStatus } from "./session";
+declare const database: Database.Database;
+export declare function createSession(session: AgentSession): void;
+export declare function finishSession(id: string, status: SessionStatus, endedAt?: string): boolean;
+export declare function getSession(id: string): AgentSession | undefined;
+export declare function getSessions(limit?: number): AgentSession[];
+export declare function addEvent(event: AgentEvent): number;
+export declare function events(limit?: number): unknown[];
+export declare function stats(): unknown;
+export declare function providers(): unknown[];
+export { database as db };
