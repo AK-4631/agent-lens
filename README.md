@@ -1,10 +1,9 @@
-```
+## Agent Lens MAX
 
-```
-Agent Lens MAX
 Open-source observability for AI agents.
 See exactly what your AI agent is doing.
 Agent Lens MAX records agent sessions and transforms them into a structured, searchable observability timeline of:
+```
 🧠 AI model & provider detection
 🤖 Agent sessions
 🔧 Tool & command execution
@@ -19,14 +18,13 @@ Agent Lens MAX records agent sessions and transforms them into a structured, sea
 🔐 API-key authentication
 🗄️ Persistent event storage
 📈 Agent statistics
-```bash
+```
+```
 npm install
 npm run build
 npm start
 ```
 Open:
-```
-
 ```
 http://127.0.0.1:4321
 ```
@@ -38,14 +36,11 @@ http://127.0.0.1:4321
 Instead of running an AI agent as a black box:
 
 ```
-```
 AI Agent
    ↓
 ?????
 ```
 Agent Lens MAX turns it into:
-```
-
 ```
 AI Agent
 │
@@ -89,15 +84,12 @@ Supported providers/signals include:
 Example:
 
 ```
-```
 Provider: OpenAI
 ```
 ---
 🤖 Model Detection
 Agent Lens MAX can identify models from commands, environment variables, and agent output.
 Examples:
-```
-
 ```
 gpt-4o
 gpt-4.1
@@ -117,14 +109,11 @@ grok-*
 When the underlying agent exposes usage information, Agent Lens MAX can extract:
 
 ```
-```
 Input tokens
 Output tokens
 Total tokens
 ```
 Example provider response:
-```
-
 ```
 {
 "prompt_tokens": 1000,
@@ -136,7 +125,6 @@ Example provider response:
 Agent Lens converts this into:
 
 ```
-```
 Input:  1000
 Output: 500
 Total:  1500
@@ -146,8 +134,6 @@ Total:  1500
 💰 Cost Estimation
 When a supported model and token usage are available, Agent Lens MAX estimates:
 ```
-
-```
 Input cost
 Output cost
 Total estimated cost
@@ -155,7 +141,6 @@ Total estimated cost
 
 Example:
 
-```
 ```
 Provider: OpenAI
 Model:    gpt-4o
@@ -167,8 +152,6 @@ Cost estimates are observational estimates and should not be treated as official
 ---
 📡 Real-Time Events
 Agent Lens records structured agent lifecycle events such as:
-```
-
 ```
 session_start
 command
@@ -182,7 +165,6 @@ session_end
 
 Example:
 
-```
 ```
 SESSION START
       │
@@ -209,14 +191,11 @@ Observatory API
 Agent Lens MAX exposes a local HTTP API.
 Default server:
 ```
-
-```
 http://127.0.0.1:4321
 ```
 
 Endpoints:
 
-```
 ```
 GET /api/health
 GET /api/stats
@@ -228,34 +207,24 @@ GET /api/stream
 ---
 Health
 ```
-
-```
 GET /api/health
 ```
 
 Example:
-
-```
 ```
 curl http://127.0.0.1:4321/api/health
 ```
 ---
 Statistics
 ```
-
-```
 GET /api/stats
 ```
 
 Example:
-
-```
 ```
 curl http://127.0.0.1:4321/api/stats
 ```
 Possible information includes:
-```
-
 ```
 totalEvents
 totalSessions
@@ -270,14 +239,10 @@ avgLatency
 ---
 
 ## Events
-
-```
 ```
 GET /api/events
 ```
 Example:
-```
-
 ```
 curl "http://127.0.0.1:4321/api/events?limit=50"
 ```
@@ -285,14 +250,10 @@ curl "http://127.0.0.1:4321/api/events?limit=50"
 ---
 
 ## Sessions
-
-```
 ```
 GET /api/sessions
 ```
 Example:
-```
-
 ```
 curl http://127.0.0.1:4321/api/sessions
 ```
@@ -300,8 +261,6 @@ curl http://127.0.0.1:4321/api/sessions
 ---
 
 ## Live Stream
-
-```
 ```
 GET /api/stream
 ```
@@ -310,47 +269,35 @@ The stream is intended for real-time observability clients.
 Quick Start
 1. Clone
 ```
-
-```
 git clone https://github.com/arjunkrishna09022010-bot/agent-lens-max.git
 cd agent-lens-max
 ```
 
 ## 2. Install Dependencies
-
-```
 ```
 npm install
 ```
-3. Build
-```
 
+## 3. Build
 ```
 npm run build
 ```
 
 ## 4. Typecheck
-
-```
 ```
 npm run typecheck
 ```
-5. Run Tests
-```
 
+## 5. Run Tests
 ```
 npm test
 ```
 
 ## 6. Start Agent Lens MAX
-
-```
 ```
 npm start
 ```
 Open:
-```
-
 ```
 http://127.0.0.1:4321
 ```
@@ -360,14 +307,10 @@ http://127.0.0.1:4321
 # Development
 
 ## Build
-
-```
 ```
 npm run build
 ```
 Builds both:
-```
-
 ```
 core
 cli
@@ -376,15 +319,11 @@ cli
 ---
 
 ## Typecheck
-
-```
 ```
 npm run typecheck
 ```
 ---
 Tests
-```
-
 ```
 npm test
 ```
@@ -392,15 +331,11 @@ npm test
 ---
 
 ## Start
-
-```
 ```
 npm start
 ```
 ---
 Clean
-```
-
 ```
 npm run clean
 ```
@@ -408,8 +343,6 @@ npm run clean
 ---
 
 ## Package
-
-```
 ```
 npm pack
 ```
@@ -417,14 +350,10 @@ npm pack
 Example Agent Session
 Run a simple process:
 ```
-
-```
 node -e "console.log('AGENT_LENS_E2E_OK')"
 ```
 
 Agent Lens records:
-
-```
 ```
 Session
  ├── session_start
@@ -434,8 +363,6 @@ Session
  └── session_end
 ```
 Example:
-```
-
 ```
 ╭─────────────────────────────────────────────╮
 │ Agent Lens MAX                              │
@@ -447,8 +374,6 @@ Model:    Unknown
 ```
 
 After completion:
-
-```
 ```
 ✓ Agent session completed successfully.
 
@@ -462,28 +387,22 @@ Session ID: 5ae5d03a-3949-4d7b-a77d-499792023639
 Authentication
 Agent Lens MAX supports API-key authentication.
 Set the key in PowerShell:
-```
 
 ```
 $env:AGENT_LENS_API_KEY="your-secret-key"
 ```
 
 Start the server:
-
-```
 ```
 npm start
 ```
 Requests can then provide:
-```
 
 ```
 x-agent-lens-key
 ```
 
 Example:
-
-```
 ```
 Invoke-RestMethod `
   "http://127.0.0.1:4321/api/stats" `
@@ -492,8 +411,6 @@ Invoke-RestMethod `
   }
 ```
 Health remains available for local availability checks:
-```
-
 ```
 GET /api/health
 ```
@@ -505,14 +422,10 @@ GET /api/health
 # Environment Configuration
 
 Create a local `.env` based on:
-
-```
 ```
 .env.example
 ```
 Example:
-```
-
 ```
 AGENT_LENS_API_KEY=
 AI_PROVIDER=
@@ -523,8 +436,6 @@ GEMINI_MODEL=
 ```
 
 For PowerShell:
-
-```
 ```
 $env:AGENT_LENS_API_KEY="your-secret-key"
 $env:AI_PROVIDER="OpenAI"
@@ -581,10 +492,9 @@ Architecture
 ```
 
 ---
-
+```
 # Project Structure
 
-```
 ```
 agent-lens-max/
 │
@@ -622,8 +532,6 @@ Event Model
 Agent Lens MAX uses structured events.
 Example:
 ```
-
-```
 {
 "sessionId": "5ae5d03a-3949-4d7b-a77d-499792023639",
 "type": "model_call",
@@ -640,8 +548,6 @@ Example:
 ```
 
 Supported event types:
-
-```
 ```
 session_start
 session_end
@@ -654,8 +560,6 @@ telemetry
 ```
 ---
 Telemetry Pipeline
-```
-
 ```
 Agent Output
 │
@@ -692,14 +596,10 @@ Storage
 # Provider-Native Telemetry
 
 Agent Lens MAX distinguishes between:
-
-```
 ```
 Provider-native telemetry
 ```
 and:
-```
-
 ```
 Observed agent telemetry
 ```
@@ -707,8 +607,6 @@ Observed agent telemetry
 ## Provider-native
 
 The underlying provider/API explicitly returns usage:
-
-```
 ```
 {
   "usage": {
@@ -723,8 +621,6 @@ This is the strongest source of token information.
 Observed telemetry
 The agent process prints usage information:
 ```
-
-```
 prompt_tokens: 1000
 completion_tokens: 500
 total_tokens: 1500
@@ -737,7 +633,6 @@ Agent Lens can extract these values from the observed output.
 ## Important distinction
 
 ```
-```
 Provider API
      │
      │ native usage
@@ -749,8 +644,6 @@ Agent
 Agent Lens
 ```
 If the agent does not expose usage:
-```
-
 ```
 Provider
 │
@@ -772,8 +665,6 @@ Agent Lens cannot reliably reconstruct the provider's exact billing data from ar
 Agent Lens MAX launches and monitors child processes.
 
 The collector tracks:
-
-```
 ```
 Process start
 Process output
@@ -782,8 +673,6 @@ Process exit
 Session completion
 ```
 Example:
-```
-
 ```
 Agent Lens
 │
@@ -805,12 +694,9 @@ Agent Lens
 The default port is:
 
 ```
-```
 4321
 ```
 If another Agent Lens instance is already running, starting a second instance should report:
-```
-
 ```
 Agent Lens: port 4321 is already in use.
 An Agent Lens server may already be running at:
@@ -818,16 +704,12 @@ http://127.0.0.1:4321
 ```
 
 Check the existing server:
-
-```
 ```
 Invoke-RestMethod "http://127.0.0.1:4321/api/health"
 ```
 ---
 Windows / PowerShell
 Start the project:
-```
-
 ```
 cd "C:\Users\Divya\Desktop\agent-lens"
 npm install
@@ -837,29 +719,21 @@ npm start
 ```
 
 Check the server:
-
-```
 ```
 Invoke-RestMethod "http://127.0.0.1:4321/api/health"
 ```
 Check statistics:
 ```
-
-```
 Invoke-RestMethod "http://127.0.0.1:4321/api/stats"
 ```
 
 Check events:
-
-```
 ```
 Invoke-RestMethod "http://127.0.0.1:4321/api/events?limit=10"
 ```
 ---
 Production Build
 Recommended production sequence:
-```
-
 ```
 npm install
 npm run typecheck
@@ -873,7 +747,6 @@ npm start
 Or:
 
 ```
-```
 npm run typecheck; if ($LASTEXITCODE -ne 0) { exit 1 }
 npm run clean; if ($LASTEXITCODE -ne 0) { exit 1 }
 npm run build; if ($LASTEXITCODE -ne 0) { exit 1 }
@@ -886,8 +759,6 @@ Testing
 Agent Lens MAX includes automated tests for core telemetry behavior.
 Tests cover areas such as:
 ```
-
-```
 Provider detection
 Model detection
 Input token extraction
@@ -899,12 +770,9 @@ Cost estimation
 Run:
 
 ```
-```
 npm test
 ```
 Expected result:
-```
-
 ```
 ======================================
 AGENT LENS MAX TEST SUITE
@@ -922,8 +790,6 @@ ALL TESTS PASSED
 # Production Checklist
 
 Before deploying:
-
-```
 ```
 [ ] npm install
 [ ] npm run typecheck
@@ -944,8 +810,10 @@ Before deploying:
 [ ] Verify process shutdown
 ```
 ---
-Current Status
-ComponentStatus	
+# Current Status
+
+ComponentStatus
+```
 Agent sessions	✅
 Event tracking	✅
 Process collection	✅
@@ -964,9 +832,12 @@ TypeScript build	✅
 Automated tests	✅
 npm packaging	✅
 Provider-native integrations	🚧
+```
 ---
 Roadmap
+
 Phase 1 — Core Observability
+```
 Session tracking
 Process monitoring
 stdout capture
@@ -974,7 +845,10 @@ stderr capture
 Event storage
 HTTP API
 Statistics
+```
+
 Phase 2 — AI Telemetry
+```
 Provider detection
 Model detection
 Token extraction
@@ -1016,7 +890,6 @@ Why Agent Lens?
 AI agents are increasingly capable, but their execution is often difficult to understand.
 Agent Lens MAX provides an observability layer between the agent and the developer.
 ```
-
 ```
         AI AGENT
             │
@@ -1028,18 +901,18 @@ Agent Lens MAX provides an observability layer between the agent and the develop
             │
      ┌──────┼──────┐
      ▼      ▼      ▼
-Model   Tools  Process
-│      │      │
-└──────┼──────┘
-▼
-Telemetry
-│
-┌──────┼──────┐
-▼      ▼      ▼
-Tokens  Cost  Errors
-│
-▼
-Observatory
+   Model   Tools  Process
+      │      │      │
+      └──────┼──────┘
+             ▼
+         Telemetry
+             │
+      ┌──────┼──────┐
+      ▼      ▼      ▼
+   Tokens  Cost  Errors
+             │
+             ▼
+         Observatory
 ```
 
 ---
@@ -1075,56 +948,40 @@ Give developers direct access to sessions, events, telemetry, and statistics.
 Contributions are welcome.
 
 Clone the repository:
-
-```
 ```
 git clone https://github.com/arjunkrishna09022010-bot/agent-lens-max.git
 cd agent-lens-max
 ```
 Install dependencies:
 ```
-
-```
 npm install
 ```
 
 Run typechecking:
-
-```
 ```
 npm run typecheck
 ```
 Build:
 ```
-
-```
 npm run build
 ```
 
 Run tests:
-
-```
 ```
 npm test
 ```
 Create a feature branch:
 ```
-
-```
 git checkout -b feature/my-feature
 ```
 
 Make your changes and verify:
-
-```
 ```
 npm run typecheck
 npm run build
 npm test
 ```
 Then commit:
-```
-
 ```
 git add .
 git commit -m "feat: add my feature"
@@ -1133,15 +990,12 @@ git commit -m "feat: add my feature"
 Push:
 
 ```
-```
 git push origin feature/my-feature
 ```
 Open a pull request on GitHub.
 ---
 Security
 Never commit:
-```
-
 ```
 .env
 .env.local
@@ -1156,8 +1010,6 @@ Production secrets
 Add sensitive files to `.gitignore`.
 
 Example:
-
-```
 ```
 node_modules/
 dist/
@@ -1176,7 +1028,6 @@ Add the project's selected license to:
 
 ```
 LICENSE
-```
 
 before making a formal release.
 
@@ -1189,14 +1040,11 @@ before making a formal release.
 GitHub:
 
 ```
-```
 https://github.com/arjunkrishna09022010-bot
 ```
 ---
 Agent Lens MAX
 See what your AI agent is doing.
-```
-
 ```
 ╔══════════════════════════════════════════╗
 ║          AGENT LENS MAX                  ║
@@ -1227,7 +1075,6 @@ Understand agents.
                 ↓
 
           AGENT LENS MAX
-```
 ---
 ⭐ Star the project
 If Agent Lens MAX is useful to you:
@@ -1239,6 +1086,5 @@ If Agent Lens MAX is useful to you:
 💡 Suggest features
 🔧 Submit pull requests
 📢 Share the project
-```
 
 **Agent Lens MAX — observability for the next generation of AI agents.**
